@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rotas Atlimarjom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="leaflet.css">
+<style>
+/* VOICE everyday tool for drivers and the cooperative office, calm and legible
+   IDEA the driver's route sheet crossed with a road sign: day, truck, numbered stops
+   PICTURE the real city map with the day's route in the truck's colour, numbered stops, galpão
+   COLOUR white ground, ink, truck 1 blue, truck 2 orange, red only for overtime
+   TYPE Barlow Condensed (road-sign lettering) + Barlow
+   LAYOUT week switch and comparison first, then day/truck controls, map left / sheet right, week grid */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0e1513);--ink:light-dark(#121816,#e6ecea);--soft:light-dark(#56625e,#9aa8a3);--line:light-dark(#dfe5e2,#26322e);--land:light-dark(#eef3f1,#141d1a);--street:light-dark(#c9d3cf,#33423d);--c1:light-dark(#0a56c9,#6aa4ff);--c2:light-dark(#d2470e,#ff8d55);--warn:light-dark(#b0001a,#ff6b7d);--good:light-dark(#0a7a4a,#4fd39a);--panel:light-dark(#f6f8f7,#131b18)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip;--c:var(--c1)}
+body[data-t=c2]{--c:var(--c2)}
+.band{padding:clamp(20px,3vw,40px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{padding-bottom:8px}
+h1{font:700 clamp(32px,5vw,48px)/1.05 "Barlow Condensed",sans-serif;letter-spacing:-.01em;margin:0}
+h2{font:700 26px/1.1 "Barlow Condensed",sans-serif;margin:0 0 10px}
+.sub{color:var(--soft);margin:4px 0 0}
+.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{font:600 17px/1 Barlow,sans-serif;min-height:44px;padding:0 16px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--c);color:#fff}
+#semanas button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+#semanas button{font-size:19px;padding:0 22px;min-height:50px}
+button:focus-visible,a:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+.trk small{font-weight:500;opacity:.85;margin-left:4px}
+.compare{margin-top:20px;border-top:2px solid var(--ink)}
+.finding{font:600 clamp(19px,2.2vw,23px)/1.3 Barlow,sans-serif;margin:12px 0 4px;max-width:60ch}
+.finding+p{margin:0 0 12px;color:var(--soft);max-width:70ch}
+table.cmp{width:100%;border-collapse:collapse;font-size:16px}
+.cmp th,.cmp td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.cmp th:first-child,.cmp td:first-child{text-align:left;white-space:normal;color:var(--soft)}
+.cmp thead th{font-weight:600;color:var(--ink)}
+.cmp .sel{background:var(--panel);font-weight:600}
+.cmp .best{color:var(--good)}
+.cmp .bad{color:var(--warn)}
+.cmp .det{font-weight:400;color:var(--soft);white-space:nowrap}
+.cmp td small{font-weight:600;font-size:12px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin-top:26px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:16px}
+.stat{background:var(--bg);padding:10px 14px}
+.stat span{display:block;color:var(--soft);font-size:14px}
+.stat strong{font:700 30px/1.1 "Barlow Condensed",sans-serif;white-space:nowrap}
+.over{color:var(--warn)}
+main.band{padding-top:8px}
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:24px;align-items:start}
+.mapcard{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--land)}
+#map{height:560px;background:var(--land)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-top:1px solid var(--line);background:var(--bg);font-size:14px;color:var(--soft)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:6px}
+.pin{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 15px/1 "Barlow Condensed",sans-serif;color:#fff;background:var(--c);border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.home{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#121816;border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.leaflet-tooltip{font:600 14px Barlow,sans-serif}
+ol.sheet{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+.sheet li{display:grid;grid-template-columns:4.4em 2.2em minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:start}
+.sheet time{font:700 24px/1.1 "Barlow Condensed",sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sheet time small,.cell small,.stat small{font:600 12px Barlow,sans-serif;color:var(--warn);display:block}
+.sheet .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 16px/1 "Barlow Condensed",sans-serif;background:var(--c);color:#fff}
+.sheet .n.g{background:var(--ink);color:var(--bg)}
+.sheet .n.l{background:transparent;border:2px solid var(--ink);color:var(--ink)}
+.sheet b{display:block;font-weight:600;font-size:17px}
+.sheet small{color:var(--soft);font-size:14px}
+.sheet li.late time{color:var(--warn)}
+.actions{margin-top:16px;padding:14px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;font:600 16px Barlow,sans-serif;min-height:44px;padding:0 18px;border-radius:10px;background:var(--c);color:#fff;text-decoration:none}
+.actions p{margin:8px 0 0;font-size:14px;color:var(--soft)}
+.week{display:grid;grid-template-columns:6.5em repeat(5,minmax(0,1fr));gap:6px}
+.week .h{font-weight:600;font-size:14px;color:var(--soft);align-self:end;padding:0 4px}
+.week .rl{font-weight:600;font-size:15px;align-self:center}
+.cell{font:inherit;text-align:left;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--cc);border-radius:8px;padding:8px 10px;min-height:64px;cursor:pointer}
+.cell strong{display:block;font:700 22px/1.1 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+.cell span{font-size:13px;color:var(--soft)}
+.cell.late strong{color:var(--warn)}
+.cell[aria-current=true]{background:var(--bg);box-shadow:0 0 0 2px var(--cc)}
+.cell.empty{opacity:.5;cursor:default}
+.note{font-size:13px;color:var(--soft);margin-top:14px;max-width:80ch}
+#erro{display:none;padding:14px;border:1px solid var(--warn);border-radius:10px;color:var(--warn);margin-top:16px}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}#map{height:420px}}
+@media(max-width:600px){.week{grid-template-columns:4.4em repeat(5,minmax(0,1fr));gap:4px}.cell{padding:6px 5px;border-left-width:4px}.cell strong{font-size:18px}.cell span{display:none}.seg button{padding:0 12px}#semanas button{padding:0 14px}.trk small{display:none}.cmp th,.cmp td{padding:7px 4px;font-size:14px;white-space:normal}.cmp th:first-child,.cmp td:first-child{width:36%}.cmp .det,.cmp td small{display:block}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Rotas da coleta seletiva</h1>
+      <p class="sub">Atlimarjom · João Monlevade</p>
+    </div>
+    <div class="seg" id="semanas" role="group" aria-label="Qual rota mostrar">
+      <button data-s="proposta">Rota proposta</button><button data-s="atual">Rota atual</button>
+    </div>
+  </div>
+  <section class="compare" aria-label="Resumo das duas rotas">
+    <p class="finding" id="finding"></p>
+    <p id="finding2"></p>
+    <div style="overflow-x:auto"><table class="cmp" id="cmp"></table></div>
+  </section>
+  <div id="erro"></div>
+  <div class="controls">
+    <div class="seg" id="days" role="group" aria-label="Dia da semana"></div>
+    <div class="seg" id="trucks" role="group" aria-label="Caminhão"></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</div></header>
+
+<main class="band"><div class="wrap">
+  <div class="grid">
+    <section class="mapcard" aria-label="Mapa da rota">
+      <div id="map"></div>
+      <div class="legend"><span><i style="background:#121816"></i>Galpão</span><span><i style="background:var(--c)"></i>Bairros da rota, na ordem</span><span><i style="background:var(--street)"></i>Outros bairros</span></div>
+    </section>
+    <section aria-label="Folha da rota">
+      <h2 id="sheetTitle">Folha do motorista</h2>
+      <ol class="sheet" id="sheet"></ol>
+      <div class="actions">
+        <a class="btn" id="gpx" download>Baixar rota (GPX)</a>
+        <p>Abra o arquivo no OsmAnd (gratuito, funciona sem internet) para seguir a rota de bairro em bairro. Dentro de cada bairro, a equipe percorre as ruas como já faz hoje.</p>
+      </div>
+    </section>
+  </div>
+
+  <h2 style="margin-top:36px" id="weekTitle">Semana</h2>
+  <div class="week" id="week"></div>
+  <p class="note" id="nota"></p>
+</div></main>
+
+<script src="leaflet.js"></script>
+<script>
+{
+const DIAS={seg:["Seg","Segunda"],ter:["Ter","Terça"],qua:["Qua","Quarta"],qui:["Qui","Quinta"],sex:["Sex","Sexta"]};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+const num=(x,c=1)=>Number(x).toLocaleString("pt-BR",{minimumFractionDigits:c,maximumFractionDigits:c});
+const nomeCam=c=>"Caminhão "+String(c).replace(/\D/g,"");
+// "03:08(+1d)" -> 03:08 com aviso de dia seguinte
+const hora=h=>{h=String(h);return h.endsWith("(+1d)")?esc(h.slice(0,5))+" <small>dia seguinte</small>":esc(h)};
+const minutos=h=>{h=String(h);return +h.slice(0,2)*60+ +h.slice(3,5)+(h.endsWith("(+1d)")?1440:0)};
+
+let D,sem="proposta",dia="seg",cam="c1",map,camada,ruas=null,ruasLigadas=false;
+
+function pronto(dados,dadosRuas){
+  D=dados;ruas=dadosRuas;
+  if(!D.semanas[sem])sem=Object.keys(D.semanas)[0];
+  dia=D.dias[0];cam=Object.keys(D.caminhoes)[0];
+  $("days").innerHTML=D.dias.map(d=>`<button data-d="${esc(d)}" aria-label="${esc(DIAS[d]?.[1]||d)}">${esc(DIAS[d]?.[0]||d)}</button>`).join("");
+  $("trucks").innerHTML=Object.entries(D.caminhoes).map(([c,v])=>`<button class="trk" data-c="${esc(c)}"><b>${esc(nomeCam(c))}</b><small>baú ${num(v.capacidade_m3)} m³</small></button>`).join("");
+  iniciarMapa();
+  comparar();
+  lerHash();
+}
+
+function comparar(){
+  const P=D.semanas.proposta.resumo,A=D.semanas.atual.resumo,n=Object.keys(D.bairros).length;
+  const dif=A.hora_extra_h-P.hora_extra_h;
+  const medP=P.dias_depois_do_fim?P.hora_extra_h/P.dias_depois_do_fim:0,medA=A.dias_depois_do_fim?A.hora_extra_h/A.dias_depois_do_fim:0;
+  $("finding").textContent=`A rota proposta atende ${P.bairros===n?"todos os "+n:P.bairros+" de "+n} bairros com ${num(dif)} h a menos de hora extra por semana.`;
+  $("finding2").textContent=`Ela passa das ${D.jornada.fim} em ${P.dias_depois_do_fim} dos ${P.caminhao_dias} caminhão-dias, em média ${num(medP)} h em cada; hoje são ${A.dias_depois_do_fim} caminhão-dias, em média ${num(medA)} h em cada.`;
+  const tm=r=>`${hora(r.termino_mais_tarde.hora)}`;
+  const linhas=[
+    ["Bairros atendidos",r=>`${r.bairros} de ${n}`,r=>r.bairros,1],
+    ["Material coletado",r=>`${num(r.cobertura_m3)} m³ (${num(100*r.cobertura_m3/r.demanda_m3)}%)`,r=>r.cobertura_m3,1],
+    ["Hora extra na semana",r=>`${num(r.hora_extra_h)} h`,r=>r.hora_extra_h,-1],
+    [`Caminhão-dias depois das ${D.jornada.fim}`,r=>`${r.dias_depois_do_fim} de ${r.caminhao_dias}`,r=>r.dias_depois_do_fim,-1],
+    ["Término mais tarde",r=>tm(r)+` <span class="det">${esc(DIAS[r.termino_mais_tarde.dia]?.[0]||"")} · ${esc(nomeCam(r.termino_mais_tarde.caminhao))}</span>`,r=>r.termino_mais_tarde.min,-1],
+    ["Tempo de estrada",r=>`${r.estrada_min} min`,r=>r.estrada_min,-1],
+    ["Viagens até o galpão",r=>`${r.viagens}`,r=>r.viagens,0]
+  ];
+  const cls=(s,v,o,dir)=>{let c=s===sem?"sel":"";if(dir&&v!==o)c+=(dir*(v-o)>0?" best":" bad");return c};
+  $("cmp").innerHTML=`<thead><tr><th></th><th class="${sem==="proposta"?"sel":""}">Proposta</th><th class="${sem==="atual"?"sel":""}">Atual</th></tr></thead><tbody>`+
+    linhas.map(([rot,f,v,dir])=>`<tr><td>${rot}</td><td class="${cls("proposta",v(P),v(A),dir)}">${f(P)}</td><td class="${cls("atual",v(A),v(P),dir)}">${f(A)}</td></tr>`).join("")+`</tbody>`;
+}
+
+function iniciarMapa(){
+  map=L.map("map",{zoomControl:true,preferCanvas:true,zoomSnap:.25}).setView(D.galpao,14);
+  const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+  // sem acesso ao mapa do OpenStreetMap, desenha as ruas da própria rede
+  base.on("tileerror",()=>{if(!ruasLigadas&&ruas){ruasLigadas=true;L.polyline(ruas,{color:corDe("--street"),weight:1.5,interactive:false}).addTo(map).bringToBack()}});
+  camada=L.layerGroup().addTo(map);
+}
+
+// cor final de uma variável do CSS (o canvas do mapa não entende light-dark)
+function corDe(v){const s=document.createElement("span");s.style.color=`var(${v})`;document.body.appendChild(s);const c=getComputedStyle(s).color;s.remove();return c}
+const cor=()=>corDe("--c");
+
+function desenhar(d){
+  camada.clearLayers();
+  const naRota=new Set(d?d.paradas.filter(p=>p.tipo==="bairro").map(p=>p.local):[]);
+  for(const [nome,p] of Object.entries(D.bairros))if(!naRota.has(nome))
+    L.circleMarker(p,{radius:5,color:"#7d8a86",weight:1,fillColor:"#c9d3cf",fillOpacity:.9}).bindTooltip(nome).addTo(camada);
+  L.marker(D.galpao,{icon:L.divIcon({className:"",html:'<div class="home"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M1 8 8 2l7 6v7H1Z" fill="#fff"/></svg></div>',iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip("Galpão").addTo(camada);
+  if(!d){map.setView(D.galpao,14);return}
+  L.polyline(d.trajeto,{color:"#fff",weight:9,opacity:.9}).addTo(camada);
+  const linha=L.polyline(d.trajeto,{color:cor(),weight:5}).addTo(camada);
+  for(const p of d.paradas)if(p.tipo==="bairro")
+    L.marker(D.bairros[p.local],{icon:L.divIcon({className:"",html:`<div class="pin">${p.n}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(`${p.n}. ${esc(p.local)} · ${esc(p.hora)}`).addTo(camada);
+  map.fitBounds(linha.getBounds(),{padding:[24,24]});
+}
+
+function lerHash(){
+  const m=/^#(proposta|atual)-(seg|ter|qua|qui|sex)-(c\d)$/.exec(location.hash);
+  if(m&&D.caminhoes[m[3]]){sem=m[1];dia=m[2];cam=m[3]}
+  mostrar();
+}
+function ir(){const h=`#${sem}-${dia}-${cam}`;if(location.hash!==h)location.hash=h;else mostrar()}
+window.addEventListener("hashchange",lerHash);
+
+function mostrar(){
+  document.body.dataset.t=cam;
+  const S=D.semanas[sem],d=S.dias[`${cam}_${dia}`];
+  for(const b of $("semanas").children)b.setAttribute("aria-pressed",b.dataset.s===sem);
+  for(const b of $("days").children)b.setAttribute("aria-pressed",b.dataset.d===dia);
+  for(const b of $("trucks").children)b.setAttribute("aria-pressed",b.dataset.c===cam);
+  comparar();
+  const titulo=`${DIAS[dia]?.[1]||dia} · ${nomeCam(cam)}`;
+  $("sheetTitle").textContent=titulo;
+  const fim=minutos(D.jornada.fim);
+  if(!d){
+    $("stats").innerHTML=`<div class="stat"><span>${esc(S.titulo)}</span><strong>Sem coleta</strong></div>`;
+    $("sheet").innerHTML=`<li><span></span><span></span><div><b>Este caminhão não sai neste dia.</b></div></li>`;
+    $("gpx").style.display="none";
+  }else{
+    const viagens=d.paradas.filter(p=>p.tipo==="descarga").length,late=d.hora_extra_min>0;
+    $("stats").innerHTML=`<div class="stat"><span>Saída</span><strong>${esc(D.jornada.inicio)}</strong></div>
+      <div class="stat"><span>Término previsto</span><strong class="${late?"over":""}">${hora(d.termino)}</strong>${late?`<small>${num(d.hora_extra_min/60)} h de hora extra</small>`:""}</div>
+      <div class="stat"><span>Bairros</span><strong>${d.bairros}</strong></div>
+      <div class="stat"><span>Material no dia</span><strong>${num(d.carga_m3)} m³</strong><span>${viagens} ${viagens===1?"viagem":"viagens"} até o galpão</span></div>`;
+    $("sheet").innerHTML=d.paradas.map(p=>{
+      const mk=p.tipo==="bairro"?`<span class="n">${p.n}</span>`:p.tipo==="almoco"?`<span class="n l">A</span>`:`<span class="n g">G</span>`;
+      const nome=p.tipo==="saida"?"Saída do galpão":p.tipo==="descarga"?"Descarga no galpão":p.tipo==="almoco"?"Almoço no galpão":p.local;
+      const det=p.tipo==="saida"?"caminhão vazio":p.detalhe;
+      return `<li class="${minutos(p.hora)>fim?"late":""}"><time>${hora(p.hora)}</time>${mk}<div><b>${esc(nome)}</b><small>${esc(det)}</small></div></li>`}).join("")+
+      `<li class="${late?"late":""}"><time>${hora(d.termino)}</time><span class="n g">G</span><div><b>Fim do dia</b><small>${late?num(d.hora_extra_min/60)+" h depois das "+esc(D.jornada.fim):"dentro do horário"}</small></div></li>`;
+    const g=$("gpx");g.style.display="";g.href=d.gpx;g.setAttribute("download",d.gpx.split("/").pop());
+  }
+  semana(S);
+  desenhar(d);
+  $("nota").textContent=`${S.titulo}: ${S.descricao}.`+(S.resumo.bairros_fora.length?` Fora desta rota: ${S.resumo.bairros_fora.join(", ")}.`:"")+` Jornada ${D.jornada.inicio}–${D.jornada.fim}, descarga de ${D.jornada.descarga_min} min por viagem. Horários previstos pelo modelo; o tempo real pode variar.`;
+}
+
+function semana(S){
+  $("weekTitle").textContent=`Semana · ${S.titulo.toLowerCase()}`;
+  let h=`<div></div>`+D.dias.map(d=>`<div class="h">${esc(DIAS[d]?.[0]||d)}</div>`).join("");
+  for(const c of Object.keys(D.caminhoes)){
+    h+=`<div class="rl">${esc(nomeCam(c).replace("Caminhão","Cam."))}</div>`;
+    for(const d of D.dias){const x=S.dias[`${c}_${d}`],on=d===dia&&c===cam;
+      if(!x){h+=`<button class="cell empty" style="--cc:var(--${c})" data-d="${d}" data-c="${c}" aria-current="${on}"><strong>—</strong><span>sem coleta</span></button>`;continue}
+      const late=x.hora_extra_min>0;
+      h+=`<button class="cell ${late?"late":""}" style="--cc:var(--${c})" data-d="${d}" data-c="${c}" aria-current="${on}" aria-label="${esc(DIAS[d]?.[1]||d)}, ${esc(nomeCam(c))}, termina ${esc(x.termino)}"><strong>${hora(x.termino)}</strong><span>${x.bairros} bairros${late?" · +"+num(x.hora_extra_min/60)+" h":""}</span></button>`}}
+  $("week").innerHTML=h;
+}
+
+$("semanas").addEventListener("click",e=>{const b=e.target.closest("button");if(b){sem=b.dataset.s;ir()}});
+$("days").addEventListener("click",e=>{const b=e.target.closest("button");if(b){dia=b.dataset.d;ir()}});
+$("trucks").addEventListener("click",e=>{const b=e.target.closest("button");if(b){cam=b.dataset.c;ir()}});
+$("week").addEventListener("click",e=>{const b=e.target.closest(".cell");if(b){dia=b.dataset.d;cam=b.dataset.c;ir()}});
+
+Promise.all([fetch("semana.json").then(r=>r.json()),fetch("ruas.json").then(r=>r.json()).catch(()=>null)])
+  .then(([a,b])=>pronto(a,b))
+  .catch(()=>{const e=$("erro");e.style.display="block";e.textContent="Não foi possível carregar as rotas (semana.json). Abra a página por um servidor, por exemplo: python -m http.server"});
+}
+</script>
+</body>
+</html>
