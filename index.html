@@ -16,7 +16,7 @@
    COLOUR white ground, ink, truck 1 blue, truck 2 orange, red only for overtime
    TYPE Barlow Condensed (road-sign lettering) + Barlow
    LAYOUT week switch and comparison first, then day/truck controls, map left / sheet right, week grid */
-:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0e1513);--ink:light-dark(#121816,#e6ecea);--soft:light-dark(#56625e,#9aa8a3);--line:light-dark(#dfe5e2,#26322e);--land:light-dark(#eef3f1,#141d1a);--street:light-dark(#c9d3cf,#33423d);--c1:light-dark(#0a56c9,#6aa4ff);--c2:light-dark(#d2470e,#ff8d55);--warn:light-dark(#b0001a,#ff6b7d);--good:light-dark(#0a7a4a,#4fd39a);--panel:light-dark(#f6f8f7,#131b18)}
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0e1513);--ink:light-dark(#121816,#e6ecea);--soft:light-dark(#56625e,#9aa8a3);--line:light-dark(#dfe5e2,#26322e);--land:light-dark(#eef3f1,#141d1a);--street:light-dark(#c9d3cf,#33423d);--c1:light-dark(#0a56c9,#6aa4ff);--c2:light-dark(#d2470e,#ff8d55);--warn:light-dark(#b0001a,#ff6b7d);--good:light-dark(#1a7134,#4fd39a);--verde:light-dark(#1a7134,#0f3b1d);--laranja:#f8a054;--panel:light-dark(#f6f8f7,#131b18)}
 :root[data-theme=light]{color-scheme:light}
 :root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
@@ -101,14 +101,42 @@ ol.sheet{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
 :root[data-escuro] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
 :root[data-escuro] .leaflet-control-attribution,:root[data-escuro] .leaflet-bar a{background:#1c2723;color:#e6ecea}
 @media(max-width:600px){.tema span{display:none}.tema{padding:0 14px}}
+/* identidade da Atlimarjom: verde do cartaz da coleta, uma cor por dia */
+:root{--d-seg:#eb805b;--d-ter:#ea5b97;--d-qua:#e91c6a;--d-qui:#b44893;--d-sex:#6d4696}
+.marca{background:var(--verde);color:#fff;padding:clamp(20px,3vw,36px) max(4vw,16px) clamp(24px,3vw,40px)}
+.marca h1{text-transform:uppercase;letter-spacing:.01em}
+.marca .sub{color:#fff;opacity:.9}
+.id{display:flex;align-items:center;gap:16px}
+.id img{width:112px;height:auto;flex:none;background:#1a7134;border-radius:10px;padding:4px}
+.marca #semanas{border-color:rgba(255,255,255,.45)}
+.marca #semanas button{color:#fff;text-transform:uppercase;font-family:"Barlow Condensed",sans-serif;font-size:20px;letter-spacing:.02em}
+.marca #semanas button+button{border-color:rgba(255,255,255,.45)}
+.marca #semanas button[aria-pressed=true]{background:#fff;color:#1a7134}
+.marca .tema{color:#fff;border-color:rgba(255,255,255,.45)}
+.cartao{background:var(--bg);color:var(--ink);border-radius:16px;padding:18px clamp(14px,2vw,24px) 10px;margin-top:22px;border-top:0}
+.etiqueta{display:inline-block;background:var(--laranja);color:#2a1606;font:700 16px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.03em;padding:7px 14px;border-radius:999px}
+.painel{padding-top:20px;padding-bottom:4px}
+.painel .controls{margin-top:0}
+.dias{display:flex;flex-wrap:wrap;gap:6px}
+.dias button{font:700 18px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.03em;min-height:44px;min-width:58px;padding:0 14px;border:0;border-radius:8px;cursor:pointer;background:color-mix(in srgb,var(--dc) 18%,var(--bg));color:var(--ink)}
+.dias button[aria-pressed=true]{background:var(--dc);color:#fff;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--dc)}
+.week .h{color:var(--dc);text-transform:uppercase;font-family:"Barlow Condensed",sans-serif;font-size:17px}
+h2{text-transform:uppercase;letter-spacing:.01em}
+.rodape{margin-top:40px;padding-top:24px;padding-bottom:28px}
+.rodape .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px}
+.rodape p{margin:0;font-size:14px;opacity:.92}
+@media(max-width:600px){.marca h1{font-size:28px}.id img{width:80px}.id{gap:12px}.dias button{min-width:0;flex:1;padding:0 6px}}
 </style>
 </head>
 <body>
-<header class="band"><div class="wrap">
+<header class="marca"><div class="wrap">
   <div class="top">
-    <div>
-      <h1>Rotas da coleta seletiva</h1>
-      <p class="sub">Atlimarjom · João Monlevade</p>
+    <div class="id">
+      <img src="logo.png" alt="Atlimarjom" width="104" height="52">
+      <div>
+        <h1>Rotas da coleta seletiva</h1>
+        <p class="sub">João Monlevade · os caminhões saem do galpão às 8h</p>
+      </div>
     </div>
     <div class="acoes">
       <div class="seg" id="semanas" role="group" aria-label="Qual rota mostrar">
@@ -121,18 +149,22 @@ ol.sheet{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
       </button>
     </div>
   </div>
-  <section class="compare" aria-label="Resumo das duas rotas">
+  <section class="compare cartao" aria-label="Resumo das duas rotas">
+    <span class="etiqueta">Resumo da semana</span>
     <p class="finding" id="finding"></p>
     <p id="finding2"></p>
     <div style="overflow-x:auto"><table class="cmp" id="cmp"></table></div>
   </section>
+</div></header>
+
+<div class="band painel"><div class="wrap">
   <div id="erro"></div>
   <div class="controls">
-    <div class="seg" id="days" role="group" aria-label="Dia da semana"></div>
+    <div class="dias" id="days" role="group" aria-label="Dia da semana"></div>
     <div class="seg" id="trucks" role="group" aria-label="Caminhão"></div>
   </div>
   <div class="stats" id="stats"></div>
-</div></header>
+</div></div>
 
 <main class="band"><div class="wrap">
   <div class="grid">
@@ -155,6 +187,11 @@ ol.sheet{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
   <p class="note" id="nota"></p>
 </div></main>
 
+<footer class="marca rodape"><div class="wrap">
+  <img src="logo.png" alt="" width="84" height="42">
+  <p>Associação dos Trabalhadores de Limpeza e Materiais Recicláveis de João Monlevade<br>Rotas calculadas na pesquisa de mestrado do PPGEP/UFOP</p>
+</div></footer>
+
 <script src="leaflet.js"></script>
 <script>
 {
@@ -173,7 +210,7 @@ function pronto(dados,dadosRuas){
   D=dados;ruas=dadosRuas;
   if(!D.semanas[sem])sem=Object.keys(D.semanas)[0];
   dia=D.dias[0];cam=Object.keys(D.caminhoes)[0];
-  $("days").innerHTML=D.dias.map(d=>`<button data-d="${esc(d)}" aria-label="${esc(DIAS[d]?.[1]||d)}">${esc(DIAS[d]?.[0]||d)}</button>`).join("");
+  $("days").innerHTML=D.dias.map(d=>`<button data-d="${esc(d)}" style="--dc:var(--d-${esc(d)})" aria-label="${esc(DIAS[d]?.[1]||d)}">${esc(DIAS[d]?.[0]||d)}</button>`).join("");
   $("trucks").innerHTML=Object.entries(D.caminhoes).map(([c,v])=>`<button class="trk" data-c="${esc(c)}"><b>${esc(nomeCam(c))}</b><small>baú ${num(v.capacidade_m3)} m³</small></button>`).join("");
   iniciarMapa();
   comparar();
@@ -301,7 +338,7 @@ function mostrar(){
 
 function semana(S){
   $("weekTitle").textContent=`Semana · ${S.titulo.toLowerCase()}`;
-  let h=`<div></div>`+D.dias.map(d=>`<div class="h">${esc(DIAS[d]?.[0]||d)}</div>`).join("");
+  let h=`<div></div>`+D.dias.map(d=>`<div class="h" style="--dc:var(--d-${esc(d)})">${esc(DIAS[d]?.[0]||d)}</div>`).join("");
   for(const c of Object.keys(D.caminhoes)){
     h+=`<div class="rl">${esc(nomeCam(c).replace("Caminhão","Cam."))}</div>`;
     for(const d of D.dias){const x=S.dias[`${c}_${d}`],on=d===dia&&c===cam;
